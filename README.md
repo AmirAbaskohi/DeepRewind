@@ -1,4 +1,4 @@
-# DeepRewind
+# DeepRewind (REALM@EMNLP 2026)
 
 > Predicting and Repairing Premature Commitments in Deep Research Agents.
 > Built as an additive control layer on top of [langchain-ai/open_deep_research](https://github.com/langchain-ai/open_deep_research).
