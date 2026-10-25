@@ -346,13 +346,27 @@ The `src/legacy/` folder contains two earlier implementations that provide alter
 If you use DeepRewind, please cite:
 
 ```bibtex
-@inproceedings{
-abaskohi2026deeprewind,
-title={DeepRewind: Predicting and Repairing Premature Commitments in Deep Research Agents},
-author={Amirhossein Abaskohi and Amirhossein Dabiriaghdam and Lele Wang and Peter West and Giuseppe Carenini},
-booktitle={Second Workshop for Research on Agent Language Models},
-year={2026},
-url={https://openreview.net/forum?id=LGVrhRguSJ}
+@inproceedings{abaskohi-etal-2026-deeprewind,
+    title = "{D}eep{R}ewind: Predicting and Repairing Premature Commitments in Deep Research Agents",
+    author = "Abaskohi, Amirhossein  and
+      Dabiriaghdam, Amirhossein  and
+      Wang, Lele  and
+      West, Peter  and
+      Carenini, Giuseppe",
+    editor = "Kamalloo, Ehsan  and
+      Gontier, Nicolas  and
+      Rozanov, Nikolai  and
+      Hashemzadeh, Maryam  and
+      Arora, Akhil",
+    booktitle = "Proceedings of the Second Workshop for {RE}search on Agent Language Models ({REALM} 2026)",
+    month = oct,
+    year = "2026",
+    address = "Budapest, Hungary",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2026.realm-1.73/",
+    pages = "1042--1057",
+    ISBN = "979-8-89176-485-9",
+    abstract = "Deep-research agents conduct long-horizon investigations through iterative search, evidence evaluation, belief revision, and synthesis. However, they may commit to claims before sufficient evidence is available, causing later reasoning to reinforce an incorrect interpretation. We introduce DeepRewind, an additive control layer for reversible deep research that represents the agent{'}s evolving epistemic state as a typed graph of sources, evidence, claims, hypotheses, assumptions, commitments, plans, and drafts. Before accepting an intermediate conclusion, a prompt-based world model predicts its impact and estimates reversibility based on hypothesis narrowing, information loss, recovery cost, and contradiction-trigger coverage. A binary controller blocks risky commitments, while a consistency monitor performs dependency-aware rollback when later evidence invalidates them. Across DRBench and LiveDRBench, DeepRewind improves insight recall by 3.6 percentage points and reduces premature commitments by 59.1{\%} relative to Open Deep Research."
 }
 ```
 
