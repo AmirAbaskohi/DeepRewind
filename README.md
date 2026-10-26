@@ -1,7 +1,12 @@
+<div align="center">
+    
 # DeepRewind (REALM@EMNLP 2026)
+[![paper](https://img.shields.io/badge/paper-ACL%20Anthology-b31b1b)](https://aclanthology.org/2026.realm-1.73/)
 
 > Predicting and Repairing Premature Commitments in Deep Research Agents.
 > Built as an additive control layer on top of [langchain-ai/open_deep_research](https://github.com/langchain-ai/open_deep_research).
+
+</div>
 
 <img alt="DeepRewind method overview" src="./DeepRewind-method.png" />
 
