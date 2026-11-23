@@ -163,6 +163,122 @@ python scripts/run_research.py "..." --open
 
 The script prints the final report (also saved under `reports/<thread-id>.md`) along with the paths to the research log, epistemic graph, and world-model log it produced. Run `python scripts/run_research.py --help` for the full flag list (model overrides, `--max-iterations`, `--disable-rollback`, log directories, etc.).
 
+#### One-question OpenRouter walkthrough and replay
+
+This example uses **Qwen3.5 27B**, whose OpenRouter ID is
+[`qwen/qwen3.5-27b`](https://openrouter.ai/qwen/qwen3.5-27b). The Qwen3
+32B model is a different option (`qwen/qwen3-32b`). Use a provider that
+supports tool calling and structured outputs; provider availability and pricing
+can change.
+
+1. Install the project (Python 3.10+ and [uv](https://docs.astral.sh/uv/getting-started/installation/) required):
+
+   ```bash
+   uv sync
+   cp .env.example .env
+   ```
+
+2. Create an [OpenRouter API key](https://openrouter.ai/settings/keys) and a
+   [Tavily API key](https://app.tavily.com/). Open `.env` in your editor and
+   add these lines, replacing the placeholders locally (do not paste your keys
+   into chat or commit them):
+
+   ```dotenv
+   OPENROUTER_API_KEY=your_openrouter_key
+   USE_OPENROUTER_FOR_OPENAI=true
+   TAVILY_API_KEY=your_tavily_key
+   ```
+
+   Replace the existing `TAVILY_API_KEY=` line rather than adding a second
+   one, and uncomment the OpenRouter entries if using the template. The
+   `.env` file and default output directories are git-ignored. Environment
+   variables already exported in your shell take precedence over `.env` and
+   can also override run settings; unset conflicting variables if needed.
+
+3. Run this small example:
+
+   ```bash
+   uv run python scripts/run_research.py \
+     "What are the benefits and limitations of rooftop solar for homes?" \
+     --model openai:qwen/qwen3.5-27b \
+     --search-api tavily \
+     --max-iterations 2 \
+     --max-concurrent-units 1 \
+     --max-tool-calls 3 \
+     --open
+   ```
+
+   `openai:` selects LangChain's OpenAI-compatible client; the toggle routes
+   that client's requests to OpenRouter. `--model` sets the research,
+   summarization, compression, final-report, and world-model roles; a
+   role-specific flag overrides it. The limits make the run easier to inspect,
+   but do **not** guarantee a particular cost or number of model calls. Check
+   OpenRouter and Tavily pricing and limits before running. Calls send your
+   question and research content to those services.
+
+4. Open the **Step-by-step replay** path printed at the end (or use `--open`
+   as above). The local HTML works offline. Use **Next**, **Previous**, the
+   slider, or a timeline event to move through the run. Click a graph node to
+   see its full recorded text and metadata; filter the timeline to world-model
+   or rewind events. The right panel shows the actual event, including a
+   prediction's encoded prompt, model output, predicted delta, scores, and
+   decision when recorded. Predicted changes are not presented as actual
+   graph changes. Retracted and stale nodes are gray; contested claims are
+   outlined red.
+
+5. Also inspect the printed paths: `reports/` contains the answer,
+   `research_logs/` contains the operational trace, `epistemic_graphs/`
+   contains graph events and both HTML graph views, and `world_model_logs/`
+   contains prediction, monitor, trigger, and rollback events. The other
+   interactive graph views load their visualization library from a CDN. These
+   logs can contain research content and prompts, so treat them as private.
+
+   To rebuild the offline replay for a particular run:
+
+   ```bash
+   uv run python scripts/visualize_replay.py \
+     epistemic_graphs/epistemic_graph_RUN.jsonl \
+     --world-model-log world_model_logs/world_model_RUN.jsonl --open
+   ```
+
+   Substitute the exact paths printed by the run; both logs must have the same
+   run ID. Without `--world-model-log`, the replay shows only graph events.
+
+**Important:** a rollback is not guaranteed. The monitor can rewind only after
+an accepted commitment is contradicted and its trigger fires. Short runs may
+have no prediction or rollback at all; the replay reports this rather than
+fabricating one. The control layer is defensive and can suppress errors, so a
+missing prediction is not proof that no candidate existed. Predictions with
+`parse_error` indicate that the world-model output could not be parsed.
+Increase the limits for a longer investigation, but don't assume it will
+produce a rewind.
+
+#### Demonstrate a forced rewind from a graph snapshot
+
+To see a rewind even if the original run has not produced one, run:
+
+```bash
+uv run python scripts/demo_forced_rewind.py epistemic_graphs/epistemic_graph_RUN.jsonl
+```
+
+Replace the path with an existing epistemic graph log. This reads a small
+neighborhood of its latest active claim and writes a **separate** demonstration
+under `reports/synthetic-demo-.../`; it does not resume or modify the original
+run. It calls the configured Qwen model through OpenRouter for a real
+prediction (and can incur API charges), then **forces** a commitment even if
+the gate would reject it. It adds explicitly synthetic contradiction evidence
+until the real consistency monitor fires, and applies the real rollback logic.
+The demonstration is artificial and must not be interpreted as research
+evidence or as a rewind that occurred in the original run. Open the printed
+`replay.html` path to inspect each step. Use `--claim-id` to select another
+active claim or `--model` to select a different OpenRouter-compatible model.
+
+For a more readable illustrative scenario, use
+`uv run python scripts/demo_illustrative_rewind.py epistemic_graphs/epistemic_graph_RUN.jsonl`.
+Qwen generates the research notes and predicts the commitment; the notes are
+not actual search results, and the commitment is manually introduced. The
+monitor and rollback logic still run normally.
+
 ### ⚙️ Configurations
 
 #### LLM :brain:

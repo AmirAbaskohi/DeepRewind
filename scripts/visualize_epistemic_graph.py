@@ -155,6 +155,18 @@ def build_graph(events: List[Dict[str, Any]]) -> Dict[str, Any]:
                 "metadata": event.get("metadata", {}),
                 "ts": event.get("ts", ""),
             })
+        elif kind in {"contested", "stale"} or (kind == "retraction" and event.get("kind") == "node"):
+            node_id = event.get("claim_id") if kind == "contested" else event.get("node_id")
+            if node_id in nodes:
+                nodes[node_id]["metadata"]["status"] = (
+                    "retracted" if kind == "retraction" else kind
+                )
+                nodes[node_id]["metadata"]["status_reason"] = event.get("reason", "")
+        elif kind == "retraction" and event.get("kind") == "edge":
+            for edge in edges:
+                if edge["id"] == event.get("edge_id"):
+                    edge["metadata"]["status"] = "retracted"
+                    edge["metadata"]["status_reason"] = event.get("reason", "")
 
     # Drop edges that reference unknown nodes (defensive against partial logs).
     edges = [e for e in edges if e["from"] in nodes and e["to"] in nodes]
@@ -198,6 +210,8 @@ def node_caption(node: Dict[str, Any]) -> str:
         lines.append(f"score: {metadata.get('score')}")
     if metadata.get("iteration") is not None:
         lines.append(f"iteration: {metadata.get('iteration')}")
+    if metadata.get("status"):
+        lines.append("status: " + str(metadata["status"]))
     return "\n".join(line for line in lines if line)
 
 
@@ -389,6 +403,8 @@ def to_html(graph: Dict[str, Any]) -> str:
     }
     for node in graph["nodes"].values():
         fill, shape = NODE_TYPE_STYLES.get(node.get("type", ""), DEFAULT_NODE_STYLE)
+        if node.get("metadata", {}).get("status") in {"retracted", "stale"}:
+            fill = "#e5e7eb"
         vis_nodes.append({
             "id": node["id"],
             "label": node_caption(node),
@@ -399,6 +415,8 @@ def to_html(graph: Dict[str, Any]) -> str:
 
     for edge in graph["edges"]:
         color, dashed = EDGE_TYPE_STYLES.get(edge.get("type", ""), DEFAULT_EDGE_STYLE)
+        if edge.get("metadata", {}).get("status") == "retracted":
+            color, dashed = "#9ca3af", True
         vis_edges.append({
             "id": edge.get("id") or f"{edge['from']}->{edge['to']}",
             "from": edge["from"],

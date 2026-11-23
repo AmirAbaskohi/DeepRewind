@@ -5,8 +5,7 @@ This is a convenience wrapper around ``open_deep_research.deep_researcher``
 for ad-hoc use: it runs a single question end-to-end with epistemic-graph
 recording, research-state logging, and world-model commitment control turned
 on, prints the final report, and (by default) renders the resulting graphs
-via the existing ``visualize_epistemic_graph.py`` / ``visualize_research_graph.py``
-scripts.
+and a step-by-step replay of the epistemic and world-model events.
 
 Usage examples
 ---------------
@@ -53,6 +52,7 @@ def _build_config(args: argparse.Namespace) -> dict[str, Any]:
         "search_api": args.search_api,
         "allow_clarification": args.allow_clarification,
         "max_researcher_iterations": args.max_iterations,
+        "max_react_tool_calls": args.max_tool_calls,
         "max_concurrent_research_units": args.max_concurrent_units,
         "enable_research_logging": True,
         "research_log_dir": args.research_log_dir,
@@ -66,15 +66,14 @@ def _build_config(args: argparse.Namespace) -> dict[str, Any]:
         "wm_enforce_rollback": enable_rollback,
         "wm_recovery_mode": "rollback" if enable_rollback else "none",
     }
-    if args.world_model_model:
-        configurable["world_model_model"] = args.world_model_model
     for flag_name, config_key in (
         ("research_model", "research_model"),
         ("final_report_model", "final_report_model"),
         ("compression_model", "compression_model"),
         ("summarization_model", "summarization_model"),
+        ("world_model_model", "world_model_model"),
     ):
-        value = getattr(args, flag_name)
+        value = getattr(args, flag_name) or args.model
         if value:
             configurable[config_key] = value
     return {"configurable": configurable}
@@ -104,6 +103,7 @@ def _artifact_paths(config: dict[str, Any]) -> dict[str, Optional[str]]:
 
 def _render_graphs(paths: dict[str, Optional[str]], open_browser: bool) -> None:
     import visualize_epistemic_graph
+    import visualize_replay
     import visualize_research_graph
 
     epistemic_path = paths.get("epistemic_graph")
@@ -112,6 +112,19 @@ def _render_graphs(paths: dict[str, Optional[str]], open_browser: bool) -> None:
         if not open_browser:
             argv.append("--no-open")
         visualize_epistemic_graph.main(argv)
+        world_model_path = paths.get("world_model_log")
+        replay_path = visualize_replay.make_replay(
+            Path(epistemic_path),
+            Path(world_model_path) if world_model_path else None,
+            Path(epistemic_path).with_suffix(".replay.html"),
+        )
+        print(f"Step-by-step replay: {replay_path}")
+        if open_browser:
+            import webbrowser
+
+            webbrowser.open(replay_path.resolve().as_uri())
+    else:
+        print("Warning: no epistemic graph was recorded; cannot create a replay.", file=sys.stderr)
 
     research_path = paths.get("research_log")
     if research_path:
@@ -128,7 +141,9 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
     parser.add_argument("--search-api", default="tavily", choices=["tavily", "openai", "anthropic", "none"])
     parser.add_argument("--allow-clarification", action="store_true", help="Let the agent pause to ask a clarifying question before researching.")
     parser.add_argument("--max-iterations", type=int, default=6, help="Max supervisor research iterations.")
+    parser.add_argument("--max-tool-calls", type=int, default=10, help="Max tool-calling iterations per researcher.")
     parser.add_argument("--max-concurrent-units", type=int, default=3, help="Max concurrent research sub-agents.")
+    parser.add_argument("--model", default=None, help="Model for all five roles; role-specific flags override it.")
     parser.add_argument("--research-model", default=None)
     parser.add_argument("--final-report-model", default=None)
     parser.add_argument("--compression-model", default=None)
